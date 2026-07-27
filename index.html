@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f7f9" />
+  <title>Meine Zeiterfassung</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root{
+      --bg:#f4f5f7;
+      --card:#ffffff;
+      --text:#17181b;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --accent:#111827;
+      --sales:#3b82f6;
+      --nbd:#22c55e;
+      --marketing:#f59e0b;
+      --other:#9ca3af;
+      --danger:#dc2626;
+      --shadow:0 8px 24px rgba(17,24,39,.07);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:720px;margin:0 auto;min-height:100vh;padding:16px 14px 94px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      margin-bottom:14px;
+    }
+    .title-wrap h1{font-size:22px;margin:0}
+    .title-wrap p{margin:3px 0 0;color:var(--muted);font-size:13px}
+    .icon-btn{
+      border:1px solid var(--border);background:var(--card);border-radius:12px;
+      padding:10px 12px;box-shadow:var(--shadow)
+    }
+    .tabs{
+      position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+      width:min(720px,100%);background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+      border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);
+      padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:30;
+    }
+    .tab{
+      border:0;background:transparent;padding:9px 4px;border-radius:12px;
+      color:var(--muted);font-size:12px;font-weight:600;
+    }
+    .tab.active{background:#111827;color:white}
+    .view{display:none}
+    .view.active{display:block}
+    .card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:16px;box-shadow:var(--shadow);margin-bottom:14px;
+    }
+    .date-row{display:grid;grid-template-columns:42px 1fr 42px;gap:8px;align-items:center}
+    .date-row input{width:100%;padding:11px;border:1px solid var(--border);border-radius:12px;background:white}
+    .kpi{
+      font-size:38px;font-weight:750;letter-spacing:-1px;margin:4px 0 2px
+    }
+    .muted{color:var(--muted)}
+    .category-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px
+    }
+    .cat-card{
+      border:1px solid var(--border);border-radius:14px;padding:12px;background:#fafafa
+    }
+    .cat-head{display:flex;align-items:center;gap:8px;font-weight:700}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .cat-value{font-size:22px;font-weight:750;margin-top:6px}
+    .cat-share{font-size:12px;color:var(--muted)}
+    .section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .section-head h2{font-size:17px;margin:0}
+    .entry{
+      display:grid;grid-template-columns:76px 10px 1fr auto;gap:10px;align-items:start;
+      padding:12px 0;border-bottom:1px solid var(--border)
+    }
+    .entry:last-child{border-bottom:0}
+    .time{font-weight:700;font-size:14px}
+    .bar{width:8px;border-radius:20px;min-height:46px}
+    .entry-title{font-weight:700}
+    .entry-meta{font-size:12px;color:var(--muted);margin-top:3px}
+    .entry-actions{display:flex;gap:6px}
+    .mini{
+      border:1px solid var(--border);background:white;border-radius:10px;padding:7px 8px
+    }
+    .empty{
+      text-align:center;padding:24px 8px;color:var(--muted)
+    }
+    .gap{
+      padding:10px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;
+      margin-top:8px;font-size:14px
+    }
+    .primary{
+      width:100%;border:0;background:var(--accent);color:white;border-radius:14px;
+      padding:14px 16px;font-weight:750
+    }
+    .secondary{
+      width:100%;border:1px solid var(--border);background:white;color:var(--text);
+      border-radius:14px;padding:13px 16px;font-weight:700
+    }
+    .button-stack{display:grid;gap:10px}
+    .summary-table{width:100%;border-collapse:collapse;font-size:14px}
+    .summary-table th,.summary-table td{padding:10px 6px;border-bottom:1px solid var(--border);text-align:right}
+    .summary-table th:first-child,.summary-table td:first-child{text-align:left}
+    .progress{
+      height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:10px
+    }
+    .progress > div{height:100%;background:#111827;width:0}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;
+      border:1px solid var(--border);font-size:12px;background:white
+    }
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field{display:grid;gap:6px;margin-bottom:12px}
+    .field label{font-size:13px;font-weight:700}
+    .field input,.field select,.field textarea{
+      width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;background:white
+    }
+    textarea{min-height:82px;resize:vertical}
+    .category-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .category-btn{
+      border:1px solid var(--border);background:white;border-radius:13px;padding:12px;
+      text-align:left;font-weight:700
+    }
+    .category-btn.selected{outline:3px solid rgba(17,24,39,.14)}
+    dialog{
+      border:0;border-radius:20px;padding:0;width:min(94vw,560px);
+      box-shadow:0 30px 80px rgba(0,0,0,.25)
+    }
+    dialog::backdrop{background:rgba(0,0,0,.38)}
+    .modal{padding:18px}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .modal-head h3{margin:0;font-size:20px}
+    .danger{color:var(--danger)}
+    .settings-row{
+      display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+      padding:12px 0;border-bottom:1px solid var(--border)
+    }
+    .settings-row:last-child{border-bottom:0}
+    .small-input{width:110px !important}
+    .notice{padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;font-size:13px}
+    .week-nav,.month-nav{display:grid;grid-template-columns:42px 1fr 42px;gap:8px;align-items:center}
+    .center{text-align:center}
+    .chart-row{display:flex;height:18px;border-radius:999px;overflow:hidden;background:#e5e7eb;margin:10px 0 16px}
+    .chart-row span{display:block;height:100%}
+    @media (max-width:480px){
+      .category-grid,.category-buttons{grid-template-columns:1fr 1fr}
+      .entry{grid-template-columns:70px 8px 1fr auto}
+      .form-grid{grid-template-columns:1fr 1fr}
+      .kpi{font-size:34px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="title-wrap">
+      <h1>Meine Zeiterfassung</h1>
+      <p>Persönliche Übersicht</p>
+    </div>
+    <button class="icon-btn" id="quickAddTop" aria-label="Neuer Eintrag">＋</button>
+  </header>
+
+  <main>
+    <section id="todayView" class="view active">
+      <div class="card">
+        <div class="date-row">
+          <button class="icon-btn" id="prevDay">‹</button>
+          <input type="date" id="selectedDate">
+          <button class="icon-btn" id="nextDay">›</button>
+        </div>
+        <div class="kpi" id="todayTotal">0:00 h</div>
+        <div class="muted">tatsächlich erfasst</div>
+        <div class="category-grid" id="todayCategories"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2>Einträge</h2>
+          <span class="pill" id="entryCount">0 Einträge</span>
+        </div>
+        <div id="entryList"></div>
+        <div id="gapList"></div>
+      </div>
+
+      <div class="button-stack">
+        <button class="primary" id="continueBtn">＋ Neuer Eintrag</button>
+        <button class="secondary" id="manualAddBtn">Nachtragen / frei erfassen</button>
+      </div>
+    </section>
+
+    <section id="weekView" class="view">
+      <div class="card">
+        <div class="week-nav">
+          <button class="icon-btn" id="prevWeek">‹</button>
+          <div class="center">
+            <strong id="weekLabel"></strong><br>
+            <span class="muted">Wochenübersicht</span>
+          </div>
+          <button class="icon-btn" id="nextWeek">›</button>
+        </div>
+        <div class="kpi" id="weekTotal">0:00 h</div>
+        <div class="muted">von 40:00 h</div>
+        <div class="progress"><div id="weekProgress"></div></div>
+        <div style="margin-top:10px;font-weight:700" id="weekDifference"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Kategorien</h2></div>
+        <div id="weekChart" class="chart-row"></div>
+        <div class="category-grid" id="weekCategories"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Tage</h2></div>
+        <table class="summary-table" id="weekTable"></table>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Vergleich zur Vorwoche</h2></div>
+        <div id="weekComparison"></div>
+      </div>
+    </section>
+
+    <section id="monthView" class="view">
+      <div class="card">
+        <div class="month-nav">
+          <button class="icon-btn" id="prevMonth">‹</button>
+          <div class="center">
+            <strong id="monthLabel"></strong><br>
+            <span class="muted">Monatsübersicht</span>
+          </div>
+          <button class="icon-btn" id="nextMonth">›</button>
+        </div>
+        <div class="kpi" id="monthTotal">0:00 h</div>
+        <div class="muted" id="monthMeta"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Kategorien</h2></div>
+        <div id="monthChart" class="chart-row"></div>
+        <div class="category-grid" id="monthCategories"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Wochen im Monat</h2></div>
+        <table class="summary-table" id="monthTable"></table>
+      </div>
+      <div class="card">
+        <div class="section-head"><h2>Vergleich zum Vormonat</h2></div>
+        <div id="monthComparison"></div>
+      </div>
+    </section>
+
+    <section id="settingsView" class="view">
+      <div class="card">
+        <div class="section-head"><h2>Einstellungen</h2></div>
+        <div class="settings-row">
+          <div><strong>Wochen-Soll</strong><div class="muted">Nur für die Wochenabweichung</div></div>
+          <input class="small-input" id="weeklyTarget" type="number" min="0" step="1">
+        </div>
+        <div class="settings-row">
+          <div><strong>Letzte Kategorie merken</strong><div class="muted">Bei neuen Einträgen vorauswählen</div></div>
+          <input id="rememberCategory" type="checkbox">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><h2>Kategorien</h2></div>
+        <div id="categorySettings"></div>
+        <button class="secondary" id="addCategoryBtn" style="margin-top:12px">＋ Kategorie hinzufügen</button>
+      </div>
+
+      <div class="card">
+        <div class="section-head"><h2>Export & Sicherung</h2></div>
+        <div class="button-stack">
+          <button class="primary" id="excelExportBtn">Excel exportieren</button>
+          <button class="secondary" id="backupBtn">Datensicherung herunterladen</button>
+          <button class="secondary" id="restoreBtn">Datensicherung wiederherstellen</button>
+          <input type="file" id="restoreInput" accept=".json,application/json" hidden>
+        </div>
+        <p class="notice" style="margin-top:12px">
+          Die Daten werden nur in diesem Browser gespeichert. Regelmäßige Sicherungen schützen vor Datenverlust.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" data-view="todayView">Heute</button>
+  <button class="tab" data-view="weekView">Woche</button>
+  <button class="tab" data-view="monthView">Monat</button>
+  <button class="tab" data-view="settingsView">Einstellungen</button>
+</nav>
+
+<dialog id="entryDialog">
+  <form method="dialog" class="modal" id="entryForm">
+    <div class="modal-head">
+      <h3 id="dialogTitle">Neuer Eintrag</h3>
+      <button class="mini" value="cancel" type="button" id="closeDialog">✕</button>
+    </div>
+    <input type="hidden" id="entryId">
+    <div class="field">
+      <label for="entryDate">Datum</label>
+      <input type="date" id="entryDate" required>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="startTime">Start</label>
+        <select id="startTime" required></select>
+      </div>
+      <div class="field">
+        <label for="endTime">Ende</label>
+        <select id="endTime" required></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Kategorie</label>
+      <div class="category-buttons" id="categoryButtons"></div>
+    </div>
+    <div class="field">
+      <label for="activity">Tätigkeit</label>
+      <textarea id="activity" placeholder="z. B. Kundenmeeting, Strategieplanung, Reisezeit" required></textarea>
+    </div>
+    <div id="formError" class="danger" style="margin-bottom:10px;font-weight:700"></div>
+    <div class="button-stack">
+      <button class="primary" type="submit" value="default">Speichern</button>
+      <button class="secondary danger" type="button" id="deleteEntryBtn" style="display:none">Eintrag löschen</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+(() => {
+  const STORAGE_KEY = "personal-time-tracker-v1";
+  const DEFAULT_STATE = {
+    entries: [],
+    categories: [
+      {id:"sales", name:"Sales", color:"#3b82f6"},
+      {id:"nbd", name:"NBD", color:"#22c55e"},
+      {id:"marketing", name:"Marketing", color:"#f59e0b"},
+      {id:"other", name:"Sonstiges", color:"#9ca3af"}
+    ],
+    settings: {weeklyTarget:40, rememberCategory:true, lastCategory:"sales"}
+  };
+
+  let state = loadState();
+  let selectedDate = isoDate(new Date());
+  let weekAnchor = new Date();
+  let monthAnchor = new Date();
+
+  const $ = id => document.getElementById(id);
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return structuredClone(DEFAULT_STATE);
+      const parsed = JSON.parse(raw);
+      return {
+        entries:Array.isArray(parsed.entries)?parsed.entries:[],
+        categories:Array.isArray(parsed.categories)&&parsed.categories.length?parsed.categories:structuredClone(DEFAULT_STATE.categories),
+        settings:{...DEFAULT_STATE.settings,...(parsed.settings||{})}
+      };
+    }catch(e){ return structuredClone(DEFAULT_STATE); }
+  }
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random(); }
+  function isoDate(d){
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");
+  }
+  function parseDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function minutesFromTime(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+  function timeFromMinutes(m){ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+  function durationMinutes(e){ return minutesFromTime(e.end)-minutesFromTime(e.start); }
+  function fmtMinutes(mins){
+    const sign = mins < 0 ? "−" : "";
+    const a = Math.abs(mins);
+    return sign + Math.floor(a/60)+":"+String(a%60).padStart(2,"0")+" h";
+  }
+  function fmtDateLong(s){
+    return parseDate(s).toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"});
+  }
+  function categoryById(id){ return state.categories.find(c=>c.id===id) || {name:"Unbekannt",color:"#999"}; }
+  function entriesForDate(date){
+    return state.entries.filter(e=>e.date===date).sort((a,b)=>a.start.localeCompare(b.start));
+  }
+  function totalsForEntries(entries){
+    const totals={};
+    state.categories.forEach(c=>totals[c.id]=0);
+    entries.forEach(e=>totals[e.category]=(totals[e.category]||0)+durationMinutes(e));
+    return totals;
+  }
+  function totalMinutes(entries){ return entries.reduce((s,e)=>s+durationMinutes(e),0); }
+  function startOfWeek(d){
+    const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x;
+  }
+  function endOfWeek(d){ return addDays(startOfWeek(d),6); }
+  function entriesInRange(start,end){
+    const a=isoDate(start), b=isoDate(end);
+    return state.entries.filter(e=>e.date>=a && e.date<=b);
+  }
+  function monthEntries(d){
+    const y=d.getFullYear(),m=d.getMonth();
+    return state.entries.filter(e=>{const x=parseDate(e.date);return x.getFullYear()===y&&x.getMonth()===m;});
+  }
+  function percentage(part,total){ return total ? Math.round(part/total*100) : 0; }
+
+  function renderCategoryCards(containerId, totals, total){
+    const el=$(containerId); el.innerHTML="";
+    state.categories.forEach(c=>{
+      const mins=totals[c.id]||0;
+      const div=document.createElement("div"); div.className="cat-card";
+      div.innerHTML=`<div class="cat-head"><span class="dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</div>
+        <div class="cat-value">${fmtMinutes(mins)}</div>
+        <div class="cat-share">${percentage(mins,total)} %</div>`;
+      el.appendChild(div);
+    });
+  }
+  function renderStackedChart(containerId, totals, total){
+    const el=$(containerId); el.innerHTML="";
+    if(!total){ el.innerHTML='<span style="width:100%;background:#e5e7eb"></span>'; return; }
+    state.categories.forEach(c=>{
+      const s=document.createElement("span");
+      s.style.width=(totals[c.id]||0)/total*100+"%";
+      s.style.background=c.color;
+      el.appendChild(s);
+    });
+  }
+
+  function renderToday(){
+    $("selectedDate").value=selectedDate;
+    const entries=entriesForDate(selectedDate);
+    const total=totalMinutes(entries);
+    $("todayTotal").textContent=fmtMinutes(total);
+    $("entryCount").textContent=entries.length+" "+(entries.length===1?"Eintrag":"Einträge");
+    renderCategoryCards("todayCategories",totalsForEntries(entries),total);
+
+    const list=$("entryList"); list.innerHTML="";
+    if(!entries.length){
+      list.innerHTML='<div class="empty">Noch keine Zeiten erfasst.</div>';
+    }else{
+      entries.forEach(e=>{
+        const c=categoryById(e.category);
+        const div=document.createElement("div"); div.className="entry";
+        div.innerHTML=`
+          <div class="time">${e.start}<br>${e.end}</div>
+          <div class="bar" style="background:${c.color}"></div>
+          <div><div class="entry-title">${escapeHtml(e.activity)}</div>
+          <div class="entry-meta">${escapeHtml(c.name)} · ${fmtMinutes(durationMinutes(e))}</div></div>
+          <div class="entry-actions"><button class="mini" data-edit="${e.id}">✎</button></div>`;
+        list.appendChild(div);
+      });
+    }
+
+    const gaps=[];
+    for(let i=1;i<entries.length;i++){
+      const prevEnd=minutesFromTime(entries[i-1].end), nextStart=minutesFromTime(entries[i].start);
+      if(nextStart>prevEnd) gaps.push({start:entries[i-1].end,end:entries[i].start,mins:nextStart-prevEnd});
+    }
+    const gapEl=$("gapList"); gapEl.innerHTML="";
+    gaps.forEach(g=>{
+      const div=document.createElement("div"); div.className="gap";
+      div.textContent=`Lücke: ${g.start}–${g.end} (${fmtMinutes(g.mins)})`;
+      gapEl.appendChild(div);
+    });
+
+    const last=entries[entries.length-1];
+    $("continueBtn").textContent=last?`＋ Weiter ab ${last.end}`:"＋ Neuer Eintrag";
+  }
+
+  function renderWeek(){
+    const start=startOfWeek(weekAnchor), end=endOfWeek(weekAnchor);
+    $("weekLabel").textContent=`${start.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})} – ${end.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"})}`;
+    const entries=entriesInRange(start,end);
+    const total=totalMinutes(entries);
+    const target=Number(state.settings.weeklyTarget||40)*60;
+    $("weekTotal").textContent=fmtMinutes(total);
+    $("weekProgress").style.width=Math.min(100,total/target*100)+"%";
+    const diff=total-target;
+    $("weekDifference").textContent=(diff>=0?"Überstunden: ":"Minusstunden: ")+fmtMinutes(Math.abs(diff));
+    renderCategoryCards("weekCategories",totalsForEntries(entries),total);
+    renderStackedChart("weekChart",totalsForEntries(entries),total);
+
+    const table=$("weekTable");
+    let html="<thead><tr><th>Tag</th><th>Stunden</th><th>Lücken</th></tr></thead><tbody>";
+    for(let i=0;i<7;i++){
+      const d=addDays(start,i), date=isoDate(d), es=entriesForDate(date);
+      let gap=0;
+      for(let j=1;j<es.length;j++) gap += Math.max(0,minutesFromTime(es[j].start)-minutesFromTime(es[j-1].end));
+      html+=`<tr><td>${d.toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"})}</td><td>${fmtMinutes(totalMinutes(es))}</td><td>${gap?fmtMinutes(gap):"–"}</td></tr>`;
+    }
+    table.innerHTML=html+"</tbody>";
+
+    const prevStart=addDays(start,-7), prevEnd=addDays(end,-7);
+    const prevTotal=totalMinutes(entriesInRange(prevStart,prevEnd));
+    const delta=total-prevTotal;
+    $("weekComparison").innerHTML=`Vorwoche: <strong>${fmtMinutes(prevTotal)}</strong><br>Veränderung: <strong>${delta>=0?"+":""}${fmtMinutes(delta)}</strong>`;
+  }
+
+  function renderMonth(){
+    $("monthLabel").textContent=monthAnchor.toLocaleDateString("de-DE",{month:"long",year:"numeric"});
+    const entries=monthEntries(monthAnchor);
+    const total=totalMinutes(entries);
+    const days=new Set(entries.map(e=>e.date)).size;
+    $("monthTotal").textContent=fmtMinutes(total);
+    $("monthMeta").textContent=`${days} erfasste Tage · Ø ${days?fmtMinutes(Math.round(total/days)):"0:00 h"} pro Tag`;
+    renderCategoryCards("monthCategories",totalsForEntries(entries),total);
+    renderStackedChart("monthChart",totalsForEntries(entries),total);
+
+    const y=monthAnchor.getFullYear(),m=monthAnchor.getMonth();
+    const first=new Date(y,m,1), last=new Date(y,m+1,0);
+    const weeks=[];
+    let cursor=startOfWeek(first);
+    while(cursor<=last){
+      const wStart=new Date(cursor), wEnd=addDays(wStart,6);
+      const clippedStart=wStart<first?first:wStart, clippedEnd=wEnd>last?last:wEnd;
+      weeks.push({start:clippedStart,end:clippedEnd});
+      cursor=addDays(cursor,7);
+    }
+    let html="<thead><tr><th>Woche</th><th>Stunden</th></tr></thead><tbody>";
+    weeks.forEach((w,i)=>{
+      const mins=totalMinutes(entriesInRange(w.start,w.end));
+      html+=`<tr><td>${w.start.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}–${w.end.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"})}</td><td>${fmtMinutes(mins)}</td></tr>`;
+    });
+    $("monthTable").innerHTML=html+"</tbody>";
+
+    const prev=new Date(y,m-1,1);
+    const prevTotal=totalMinutes(monthEntries(prev));
+    const delta=total-prevTotal;
+    $("monthComparison").innerHTML=`Vormonat: <strong>${fmtMinutes(prevTotal)}</strong><br>Veränderung: <strong>${delta>=0?"+":""}${fmtMinutes(delta)}</strong>`;
+  }
+
+  function renderSettings(){
+    $("weeklyTarget").value=state.settings.weeklyTarget;
+    $("rememberCategory").checked=state.settings.rememberCategory;
+    const el=$("categorySettings"); el.innerHTML="";
+    state.categories.forEach((c,idx)=>{
+      const row=document.createElement("div"); row.className="settings-row";
+      row.innerHTML=`<div style="display:flex;align-items:center;gap:10px">
+        <input type="color" value="${c.color}" data-color="${c.id}">
+        <input value="${escapeHtml(c.name)}" data-name="${c.id}" style="max-width:190px;border:1px solid var(--border);border-radius:10px;padding:9px">
+      </div>
+      <button class="mini danger" data-remove-category="${c.id}" ${state.categories.length<=1?"disabled":""}>Löschen</button>`;
+      el.appendChild(row);
+    });
+  }
+
+  function renderAll(){
+    renderToday(); renderWeek(); renderMonth(); renderSettings();
+  }
+
+  function fillTimeSelects(){
+    ["startTime","endTime"].forEach(id=>{
+      const s=$(id); s.innerHTML="";
+      for(let m=0;m<24*60;m+=15){
+        const t=timeFromMinutes(m);
+        const o=document.createElement("option"); o.value=t;o.textContent=t;s.appendChild(o);
+      }
+    });
+  }
+
+  function openEntryDialog(mode="manual", entry=null){
+    $("formError").textContent="";
+    $("entryId").value=entry?.id||"";
+    $("dialogTitle").textContent=entry?"Eintrag bearbeiten":"Neuer Eintrag";
+    $("deleteEntryBtn").style.display=entry?"block":"none";
+    $("entryDate").value=entry?.date||selectedDate;
+
+    let start="08:00", end="08:30";
+    const dayEntries=entriesForDate($("entryDate").value);
+    if(entry){ start=entry.start;end=entry.end; }
+    else if(mode==="continue" && dayEntries.length){
+      start=dayEntries[dayEntries.length-1].end;
+      end=timeFromMinutes(Math.min(23*60+45,minutesFromTime(start)+30));
+    } else {
+      const now=new Date();
+      const rounded=Math.ceil((now.getHours()*60+now.getMinutes())/15)*15;
+      if($("entryDate").value===isoDate(now)){ start=timeFromMinutes(Math.min(rounded,23*60+30)); end=timeFromMinutes(Math.min(rounded+30,23*60+45)); }
+    }
+    $("startTime").value=start;$("endTime").value=end;
+    $("activity").value=entry?.activity||"";
+    const preferred=entry?.category||(state.settings.rememberCategory?state.settings.lastCategory:state.categories[0].id);
+    renderCategoryButtons(preferred);
+    $("entryDialog").showModal();
+  }
+
+  function renderCategoryButtons(selected){
+    const el=$("categoryButtons");el.innerHTML="";
+    state.categories.forEach(c=>{
+      const b=document.createElement("button");
+      b.type="button";b.className="category-btn"+(c.id===selected?" selected":"");
+      b.dataset.category=c.id;
+      b.innerHTML=`<span class="dot" style="background:${c.color};display:inline-block;margin-right:8px"></span>${escapeHtml(c.name)}`;
+      el.appendChild(b);
+    });
+  }
+
+  function selectedCategory(){
+    return $("categoryButtons").querySelector(".selected")?.dataset.category;
+  }
+
+  function validateEntry(data){
+    const start=minutesFromTime(data.start), end=minutesFromTime(data.end);
+    if(end<=start) return "Die Endzeit muss nach der Startzeit liegen.";
+    const overlap=state.entries.some(e=>e.date===data.date && e.id!==data.id &&
+      start < minutesFromTime(e.end) && end > minutesFromTime(e.start));
+    if(overlap) return "Dieser Zeitraum überschneidet sich mit einem bestehenden Eintrag.";
+    if(!data.activity.trim()) return "Bitte eine Tätigkeit eingeben.";
+    return "";
+  }
+
+  function saveEntryFromForm(){
+    const data={
+      id:$("entryId").value||uid(),
+      date:$("entryDate").value,
+      start:$("startTime").value,
+      end:$("endTime").value,
+      category:selectedCategory(),
+      activity:$("activity").value.trim()
+    };
+    const err=validateEntry(data);
+    if(err){$("formError").textContent=err;return false;}
+    const idx=state.entries.findIndex(e=>e.id===data.id);
+    if(idx>=0) state.entries[idx]=data; else state.entries.push(data);
+    state.settings.lastCategory=data.category;
+    saveState(); selectedDate=data.date; renderAll(); return true;
+  }
+
+  function deleteEntry(){
+    const id=$("entryId").value;
+    if(!id) return;
+    if(confirm("Diesen Eintrag wirklich löschen?")){
+      state.entries=state.entries.filter(e=>e.id!==id);
+      saveState(); $("entryDialog").close(); renderAll();
+    }
+  }
+
+  function exportExcel(){
+    if(typeof XLSX==="undefined"){ alert("Die Excel-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen."); return; }
+    const sorted=[...state.entries].sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+    const entriesSheet=sorted.map(e=>({
+      Datum:e.date, Start:e.start, Ende:e.end,
+      Dauer_Stunden:durationMinutes(e)/60,
+      Kategorie:categoryById(e.category).name,
+      Tätigkeit:e.activity
+    }));
+
+    const dates=[...new Set(sorted.map(e=>e.date))].sort();
+    const daily=dates.map(date=>{
+      const es=entriesForDate(date), totals=totalsForEntries(es);
+      const row={Datum:date};
+      state.categories.forEach(c=>row[c.name]=(totals[c.id]||0)/60);
+      row.Gesamt=totalMinutes(es)/60;
+      return row;
+    });
+
+    const months=[...new Set(sorted.map(e=>e.date.slice(0,7)))].sort();
+    const monthly=months.map(month=>{
+      const es=sorted.filter(e=>e.date.startsWith(month)), totals=totalsForEntries(es);
+      const row={Monat:month};
+      state.categories.forEach(c=>row[c.name]=(totals[c.id]||0)/60);
+      row.Gesamt=totalMinutes(es)/60;
+      return row;
+    });
+
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(entriesSheet),"Einträge");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(daily),"Tagesübersicht");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(monthly),"Monatsübersicht");
+    XLSX.writeFile(wb,`Zeiterfassung_${isoDate(new Date())}.xlsx`);
+  }
+
+  function backup(){
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+    downloadBlob(blob,`Zeiterfassung_Backup_${isoDate(new Date())}.json`);
+  }
+  function downloadBlob(blob,name){
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  function restore(file){
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const parsed=JSON.parse(reader.result);
+        if(!Array.isArray(parsed.entries)||!Array.isArray(parsed.categories)) throw new Error();
+        state=parsed; saveState(); renderAll(); alert("Datensicherung wurde wiederhergestellt.");
+      }catch(e){ alert("Die Datei ist keine gültige Datensicherung."); }
+    };
+    reader.readAsText(file);
+  }
+  function escapeHtml(s){
+    return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  }
+
+  document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active"); $(btn.dataset.view).classList.add("active");
+    renderAll();
+  }));
+  $("selectedDate").addEventListener("change",e=>{selectedDate=e.target.value;renderToday();});
+  $("prevDay").onclick=()=>{selectedDate=isoDate(addDays(parseDate(selectedDate),-1));renderToday();};
+  $("nextDay").onclick=()=>{selectedDate=isoDate(addDays(parseDate(selectedDate),1));renderToday();};
+  $("continueBtn").onclick=()=>openEntryDialog("continue");
+  $("manualAddBtn").onclick=()=>openEntryDialog("manual");
+  $("quickAddTop").onclick=()=>openEntryDialog("continue");
+  $("closeDialog").onclick=()=>$("entryDialog").close();
+  $("entryForm").addEventListener("submit",e=>{e.preventDefault();if(saveEntryFromForm())$("entryDialog").close();});
+  $("categoryButtons").addEventListener("click",e=>{
+    const b=e.target.closest("[data-category]"); if(!b)return;
+    $("categoryButtons").querySelectorAll(".category-btn").forEach(x=>x.classList.remove("selected"));
+    b.classList.add("selected");
+  });
+  $("entryList").addEventListener("click",e=>{
+    const b=e.target.closest("[data-edit]"); if(!b)return;
+    openEntryDialog("manual",state.entries.find(x=>x.id===b.dataset.edit));
+  });
+  $("deleteEntryBtn").onclick=deleteEntry;
+
+  $("prevWeek").onclick=()=>{weekAnchor=addDays(weekAnchor,-7);renderWeek();};
+  $("nextWeek").onclick=()=>{weekAnchor=addDays(weekAnchor,7);renderWeek();};
+  $("prevMonth").onclick=()=>{monthAnchor=new Date(monthAnchor.getFullYear(),monthAnchor.getMonth()-1,1);renderMonth();};
+  $("nextMonth").onclick=()=>{monthAnchor=new Date(monthAnchor.getFullYear(),monthAnchor.getMonth()+1,1);renderMonth();};
+
+  $("weeklyTarget").addEventListener("change",e=>{state.settings.weeklyTarget=Number(e.target.value||40);saveState();renderWeek();});
+  $("rememberCategory").addEventListener("change",e=>{state.settings.rememberCategory=e.target.checked;saveState();});
+  $("categorySettings").addEventListener("change",e=>{
+    if(e.target.dataset.name){
+      const c=categoryById(e.target.dataset.name); c.name=e.target.value.trim()||c.name;
+    }
+    if(e.target.dataset.color){
+      const c=categoryById(e.target.dataset.color); c.color=e.target.value;
+    }
+    saveState();renderAll();
+  });
+  $("categorySettings").addEventListener("click",e=>{
+    const b=e.target.closest("[data-remove-category]"); if(!b)return;
+    const id=b.dataset.removeCategory;
+    if(state.entries.some(x=>x.category===id)){ alert("Diese Kategorie wird noch in Einträgen verwendet und kann daher nicht gelöscht werden."); return; }
+    if(confirm("Kategorie wirklich löschen?")){state.categories=state.categories.filter(c=>c.id!==id);saveState();renderAll();}
+  });
+  $("addCategoryBtn").onclick=()=>{
+    const name=prompt("Name der neuen Kategorie:");
+    if(!name?.trim())return;
+    state.categories.push({id:"cat_"+uid(),name:name.trim(),color:"#8b5cf6"});
+    saveState();renderAll();
+  };
+
+  $("excelExportBtn").onclick=exportExcel;
+  $("backupBtn").onclick=backup;
+  $("restoreBtn").onclick=()=>$("restoreInput").click();
+  $("restoreInput").addEventListener("change",e=>{if(e.target.files[0])restore(e.target.files[0]);e.target.value="";});
+
+  fillTimeSelects();
+  renderAll();
+})();
+</script>
+</body>
+</html>
